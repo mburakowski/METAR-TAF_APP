@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "665414320278",
+    "project_id": "metar-4279e",
+    "storage_bucket": "metar-4279e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:665414320278:android:641275aefc5a5462d982b7",
+        "android_client_info": {
+          "package_name": "com.example.metar_decoder"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCGIH3aE61do6KEk-USIkul5OeENWU729k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:665414320278:android:545637da6673b256d982b7",
+        "android_client_info": {
+          "package_name": "com.metar.myapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCGIH3aE61do6KEk-USIkul5OeENWU729k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
