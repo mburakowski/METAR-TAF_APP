@@ -17,15 +17,15 @@
 
     <EditText
         android:id="@+id/icaoEditText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:hint="Kod ICAO (np. EPWA)"
         android:inputType="text"
-        android:maxLength="4"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+        android:maxLength="4" />
 
     <Button
         android:id="@+id/fetchButton"
-        android:text="Pobierz METAR"
+        android:text="Pobierz METAR/TAF"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"/>

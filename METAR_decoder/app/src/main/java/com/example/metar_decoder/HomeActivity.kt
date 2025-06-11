@@ -32,10 +32,11 @@ class HomeActivity : AppCompatActivity() {
         fetchButton.setOnClickListener {
             val icao = icaoEditText.text.toString().trim().uppercase()
             if (icao.length == 4) {
-                resultTextView.text = "Pobieram dane..."
-                fetchMetar(icao) { result ->
+                resultTextView.text = "Pobieram dane METAR i TAF..."
+                fetchMetarAndTaf(icao) { metar, taf ->
                     runOnUiThread {
-                        resultTextView.text = result
+                        resultTextView.text =
+                            "=== METAR ===\n${metar ?: "Brak danych"}\n\n=== TAF ===\n${taf ?: "Brak danych"}"
                     }
                 }
             } else {
@@ -44,20 +45,53 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
-    private fun fetchMetar(icao: String, callback: (String) -> Unit) {
-        val url = "https://avwx.rest/api/metar/$icao"
-        val request = Request.Builder()
-            .url(url)
+    private fun fetchMetarAndTaf(icao: String, callback: (String?, String?) -> Unit) {
+        var metarResponse: String? = null
+        var tafResponse: String? = null
+
+        // Licznik odpowiedzi, bo chcemy poczekać na oba zapytania
+        var responses = 0
+
+        fun checkAndCallback() {
+            responses++
+            if (responses == 2) {
+                callback(metarResponse, tafResponse)
+            }
+        }
+
+        // Pobierz METAR
+        val metarUrl = "https://avwx.rest/api/metar/$icao"
+        val metarRequest = Request.Builder()
+            .url(metarUrl)
             .addHeader("Authorization", "Bearer $apiKey")
             .addHeader("Accept", "application/json")
             .build()
-        client.newCall(request).enqueue(object : Callback {
+        client.newCall(metarRequest).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
-                callback("Błąd: ${e.localizedMessage}")
+                metarResponse = "Błąd: ${e.localizedMessage}"
+                checkAndCallback()
             }
             override fun onResponse(call: Call, response: Response) {
-                val body = response.body?.string()
-                callback(body ?: "Brak danych z serwera")
+                metarResponse = response.body?.string()
+                checkAndCallback()
+            }
+        })
+
+        // Pobierz TAF
+        val tafUrl = "https://avwx.rest/api/taf/$icao"
+        val tafRequest = Request.Builder()
+            .url(tafUrl)
+            .addHeader("Authorization", "Bearer $apiKey")
+            .addHeader("Accept", "application/json")
+            .build()
+        client.newCall(tafRequest).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                tafResponse = "Błąd: ${e.localizedMessage}"
+                checkAndCallback()
+            }
+            override fun onResponse(call: Call, response: Response) {
+                tafResponse = response.body?.string()
+                checkAndCallback()
             }
         })
     }
