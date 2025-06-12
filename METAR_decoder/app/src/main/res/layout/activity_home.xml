@@ -9,7 +9,7 @@
 
     <TextView
         android:id="@+id/homeTitle"
-        android:text="METAR_decoder"
+        android:text="Pobierz METAR z AVWX"
         android:textSize="22sp"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -17,51 +17,29 @@
 
     <EditText
         android:id="@+id/icaoEditText"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
         android:hint="Kod ICAO (np. EPWA)"
         android:inputType="text"
-        android:maxLength="4" />
+        android:maxLength="4"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
 
     <Button
         android:id="@+id/fetchButton"
-        android:text="POBIERZ METAR/TAF"
+        android:text="Pobierz METAR"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"/>
 
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="wrap_content"
         android:layout_marginTop="16dp">
-        <LinearLayout
-            android:orientation="vertical"
+
+        <TextView
+            android:id="@+id/resultTextView"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-
-            <TextView
-                android:id="@+id/resultTextView"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text=""
-                android:textIsSelectable="true"/>
-
-            <Button
-                android:id="@+id/decodeButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Dekoduj"
-                android:enabled="false"
-                android:layout_marginTop="16dp" />
-
-            <TextView
-                android:id="@+id/decodedTextView"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textSize="15sp"
-                android:layout_marginTop="12dp"
-                android:textColor="#333" />
-        </LinearLayout>
+            android:layout_height="wrap_content"
+            android:text="" />
     </ScrollView>
 </LinearLayout>
+

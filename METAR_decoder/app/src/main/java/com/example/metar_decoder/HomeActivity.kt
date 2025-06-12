@@ -14,10 +14,6 @@ class HomeActivity : AppCompatActivity() {
     private val apiKey = "KBMXYEsCFCdkxdAbAagPDwVgN1GH-jtDwn01Wjif_5Y"
     private val client = OkHttpClient()
 
-    private var lastMetarJson: String? = null
-    private var lastTafJson: String? = null
-
-    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
@@ -25,29 +21,18 @@ class HomeActivity : AppCompatActivity() {
         val icaoEditText = findViewById<EditText>(R.id.icaoEditText)
         val fetchButton = findViewById<Button>(R.id.fetchButton)
         val resultTextView = findViewById<TextView>(R.id.resultTextView)
-        val decodeButton = findViewById<Button>(R.id.decodeButton)
-        val decodedTextView = findViewById<TextView>(R.id.decodedTextView)
-
-        decodeButton.isEnabled = false
 
         fetchButton.setOnClickListener {
             val icao = icaoEditText.text.toString().trim().uppercase()
             if (icao.length == 4) {
-                resultTextView.text = "Pobieram dane..."
-                decodeButton.isEnabled = false
-
-                // Pobierz METAR
-                fetchMetar(icao) { metarJson ->
-                    lastMetarJson = metarJson
-                    // Pobierz TAF po METAR
-                    fetchTaf(icao) { tafJson ->
-                        lastTafJson = tafJson
-                        runOnUiThread {
-                            val metarRaw = extractRaw(metarJson)
-                            val tafRaw = extractRaw(tafJson)
-                            resultTextView.text =
-                                "=== METAR ===\n${metarRaw}\n\n=== TAF ===\n${tafRaw}"
-                            decodeButton.isEnabled = true
+                resultTextView.text = "Pobieram dane METAR i TAF..."
+                fetchMetarAndTaf(icao) { metar, taf ->
+                    runOnUiThread {
+                        resultTextView.text = buildString {
+                            append("=== METAR ===\n")
+                            append(metar ?: "Brak danych")
+                            append("\n\n=== TAF ===\n")
+                            append(taf ?: "Brak danych")
                         }
                     }
                 }
@@ -55,68 +40,74 @@ class HomeActivity : AppCompatActivity() {
                 Toast.makeText(this, "Podaj poprawny kod ICAO (4 litery)", Toast.LENGTH_SHORT).show()
             }
         }
-
-        decodeButton.setOnClickListener {
-            try {
-                val gson = Gson()
-                val metarDecoded = lastMetarJson?.let { gson.fromJson(it, MetarResponse::class.java) }
-                val tafDecoded = lastTafJson?.let { gson.fromJson(it, TafResponse::class.java) }
-
-                val metarText = metarDecoded?.let { formatMetar(it) } ?: "Brak zdekodowanego METAR"
-                val tafText = tafDecoded?.let { formatTaf(it) } ?: "Brak zdekodowanego TAF"
-
-                decodedTextView.text = "=== METAR ===\n$metarText\n\n=== TAF ===\n$tafText"
-            } catch (e: Exception) {
-                decodedTextView.text = "Błąd dekodowania: ${e.message}"
-            }
-        }
     }
 
-    private fun fetchMetar(icao: String, callback: (String) -> Unit) {
-        val url = "https://avwx.rest/api/metar/$icao"
-        val request = Request.Builder()
-            .url(url)
+    private fun fetchMetarAndTaf(icao: String, callback: (String?, String?) -> Unit) {
+        var metarResult: String? = null
+        var tafResult: String? = null
+        var responses = 0
+
+        fun checkAndReturn() {
+            responses++
+            if (responses == 2) {
+                callback(metarResult, tafResult)
+            }
+        }
+
+        // METAR
+        val metarUrl = "https://avwx.rest/api/metar/$icao"
+        val metarRequest = Request.Builder()
+            .url(metarUrl)
             .addHeader("Authorization", "Bearer $apiKey")
             .addHeader("Accept", "application/json")
             .build()
-        client.newCall(request).enqueue(object : Callback {
+
+        client.newCall(metarRequest).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
-                callback("Błąd: ${e.localizedMessage}")
+                metarResult = "Błąd: ${e.localizedMessage}"
+                checkAndReturn()
             }
 
+            @RequiresApi(Build.VERSION_CODES.O)
             override fun onResponse(call: Call, response: Response) {
                 val body = response.body?.string()
-                callback(body ?: "Brak danych z serwera")
+                try {
+                    val gson = Gson()
+                    val metarObj = gson.fromJson(body, MetarResponse::class.java)
+                    metarResult = formatMetar(metarObj)
+                } catch (e: Exception) {
+                    metarResult = "Nie udało się przetworzyć danych METAR.\n${e.message}"
+                }
+                checkAndReturn()
             }
         })
-    }
 
-    private fun fetchTaf(icao: String, callback: (String) -> Unit) {
-        val url = "https://avwx.rest/api/taf/$icao"
-        val request = Request.Builder()
-            .url(url)
+        // TAF
+        val tafUrl = "https://avwx.rest/api/taf/$icao"
+        val tafRequest = Request.Builder()
+            .url(tafUrl)
             .addHeader("Authorization", "Bearer $apiKey")
             .addHeader("Accept", "application/json")
             .build()
-        client.newCall(request).enqueue(object : Callback {
+
+        client.newCall(tafRequest).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
-                callback("Błąd: ${e.localizedMessage}")
+                tafResult = "Błąd: ${e.localizedMessage}"
+                checkAndReturn()
             }
 
+            @RequiresApi(Build.VERSION_CODES.O)
             override fun onResponse(call: Call, response: Response) {
                 val body = response.body?.string()
-                callback(body ?: "Brak danych z serwera")
+                try {
+                    val gson = Gson()
+                    val tafObj = gson.fromJson(body, TafResponse::class.java)
+                    tafResult = formatTAF(tafObj)
+                } catch (e: Exception) {
+                    tafResult = "Nie udało się przetworzyć danych TAF.\n${e.message}"
+                }
+                checkAndReturn()
             }
         })
-    }
-
-    // Funkcja do wyciągania pola "raw" z JSON-a (surowy tekst raportu)
-    private fun extractRaw(json: String?): String {
-        return try {
-            val obj = Gson().fromJson(json, Map::class.java)
-            obj?.get("raw")?.toString() ?: ""
-        } catch (e: Exception) {
-            ""
-        }
     }
 }
