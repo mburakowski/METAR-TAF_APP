@@ -9,7 +9,7 @@
 
     <TextView
         android:id="@+id/homeTitle"
-        android:text="Pobierz METAR z AVWX"
+        android:text="METAR_decoder"
         android:textSize="22sp"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -25,21 +25,43 @@
 
     <Button
         android:id="@+id/fetchButton"
-        android:text="Pobierz METAR/TAF"
+        android:text="POBIERZ METAR/TAF"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"/>
 
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:layout_marginTop="16dp">
-
-        <TextView
-            android:id="@+id/resultTextView"
+        <LinearLayout
+            android:orientation="vertical"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="" />
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:id="@+id/resultTextView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textIsSelectable="true"/>
+
+            <Button
+                android:id="@+id/decodeButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Dekoduj"
+                android:enabled="false"
+                android:layout_marginTop="16dp" />
+
+            <TextView
+                android:id="@+id/decodedTextView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="15sp"
+                android:layout_marginTop="12dp"
+                android:textColor="#333" />
+        </LinearLayout>
     </ScrollView>
 </LinearLayout>
-
