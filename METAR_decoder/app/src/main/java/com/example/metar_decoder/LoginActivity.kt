@@ -8,6 +8,7 @@ import com.google.firebase.auth.FirebaseAuth
 
 class LoginActivity : AppCompatActivity() {
     private lateinit var auth: FirebaseAuth
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login)
@@ -22,6 +23,12 @@ class LoginActivity : AppCompatActivity() {
         loginButton.setOnClickListener {
             val email = emailEditText.text.toString().trim()
             val password = passwordEditText.text.toString().trim()
+
+            if (email.isEmpty() || password.isEmpty()) {
+                Toast.makeText(this, "Proszę wypełnić wszystkie pola", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
             auth.signInWithEmailAndPassword(email, password)
                 .addOnSuccessListener {
                     Toast.makeText(this, "Zalogowano!", Toast.LENGTH_SHORT).show()
@@ -38,3 +45,4 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 }
+
