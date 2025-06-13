@@ -17,6 +17,7 @@ import com.google.gson.Gson
 import okhttp3.*
 import java.io.IOException
 import com.google.firebase.firestore.FirebaseFirestore
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 
 class HomeActivity : AppCompatActivity() {
 
@@ -48,11 +49,9 @@ class HomeActivity : AppCompatActivity() {
         val icaoEditText = findViewById<EditText>(R.id.icaoEditText)
         val fetchButton = findViewById<Button>(R.id.fetchButton)
         val resultTextView = findViewById<TextView>(R.id.resultTextView)
-        val decodeButton = findViewById<Button>(R.id.decodeButton)
         val decodedTextView = findViewById<TextView>(R.id.decodedTextView)
         val historyButton: Button? = try { findViewById(R.id.historyButton) } catch (e: Exception) { null }
 
-        decodeButton.isEnabled = false
 
         // (Opcjonalnie) przejście do historii
         historyButton?.setOnClickListener {
@@ -63,28 +62,33 @@ class HomeActivity : AppCompatActivity() {
             val icao = icaoEditText.text.toString().trim().uppercase()
             if (icao.length == 4) {
                 resultTextView.text = "Pobieram dane..."
-                decodeButton.isEnabled = false
 
-                // Firestore: Zapisz ICAO do historii
                 val historyData = hashMapOf("icao" to icao, "timestamp" to System.currentTimeMillis())
                 firestore.collection("history").add(historyData)
-                    .addOnFailureListener {
-                        // obsługa błędu (opcjonalnie Toast)
-                    }
 
-                // Pobierz METAR
                 fetchMetar(icao) { metarJson ->
                     lastMetarJson = metarJson
-                    // Pobierz TAF po METAR
                     fetchTaf(icao) { tafJson ->
                         lastTafJson = tafJson
                         runOnUiThread {
                             val metarRaw = extractRaw(metarJson)
                             val tafRaw = extractRaw(tafJson)
-                            resultTextView.text =
-                                "=== METAR ===\n${metarRaw}\n\n=== TAF ===\n${tafRaw}"
-                            decodeButton.isEnabled = true
-                            // Powiadomienie po pobraniu
+                            resultTextView.text = "=== METAR ===\n${metarRaw}\n\n=== TAF ===\n${tafRaw}"
+
+                            try {
+                                val gson = Gson()
+                                val metarDecoded = gson.fromJson(metarJson, MetarResponse::class.java)
+                                val tafDecoded = gson.fromJson(tafJson, TafResponse::class.java)
+
+                                val metarText = formatMetar(metarDecoded)
+                                val tafText = formatTaf(tafDecoded)
+
+                                decodedTextView.text =
+                                    "=== METAR (zdekodowany) ===\n$metarText\n\n=== TAF (zdekodowany) ===\n$tafText"
+                            } catch (e: Exception) {
+                                decodedTextView.text = "Błąd dekodowania: ${e.message}"
+                            }
+
                             showNotification(icao)
                         }
                     }
@@ -94,18 +98,42 @@ class HomeActivity : AppCompatActivity() {
             }
         }
 
-        decodeButton.setOnClickListener {
-            try {
-                val gson = Gson()
-                val metarDecoded = lastMetarJson?.let { gson.fromJson(it, MetarResponse::class.java) }
-                val tafDecoded = lastTafJson?.let { gson.fromJson(it, TafResponse::class.java) }
+        val swipeRefreshLayout = findViewById<SwipeRefreshLayout>(R.id.swipeRefreshLayout)
 
-                val metarText = metarDecoded?.let { formatMetar(it) } ?: "Brak zdekodowanego METAR"
-                val tafText = tafDecoded?.let { formatTaf(it) } ?: "Brak zdekodowanego TAF"
+        swipeRefreshLayout.setOnRefreshListener {
+            val icao = icaoEditText.text.toString().trim().uppercase()
+            if (icao.length == 4) {
+                fetchMetar(icao) { metarJson ->
+                    lastMetarJson = metarJson
+                    fetchTaf(icao) { tafJson ->
+                        lastTafJson = tafJson
+                        runOnUiThread {
+                            val metarRaw = extractRaw(metarJson)
+                            val tafRaw = extractRaw(tafJson)
+                            resultTextView.text = "=== METAR ===\n${metarRaw}\n\n=== TAF ===\n${tafRaw}"
 
-                decodedTextView.text = "=== METAR ===\n$metarText\n\n=== TAF ===\n$tafText"
-            } catch (e: Exception) {
-                decodedTextView.text = "Błąd dekodowania: ${e.message}"
+                            try {
+                                val gson = Gson()
+                                val metarDecoded = gson.fromJson(metarJson, MetarResponse::class.java)
+                                val tafDecoded = gson.fromJson(tafJson, TafResponse::class.java)
+
+                                val metarText = formatMetar(metarDecoded)
+                                val tafText = formatTaf(tafDecoded)
+
+                                decodedTextView.text =
+                                    "=== METAR (zdekodowany) ===\n$metarText\n\n=== TAF (zdekodowany) ===\n$tafText"
+                            } catch (e: Exception) {
+                                decodedTextView.text = "Błąd dekodowania: ${e.message}"
+                            }
+
+                            swipeRefreshLayout.isRefreshing = false
+                            showNotification(icao)
+                        }
+                    }
+                }
+            } else {
+                Toast.makeText(this, "Podaj poprawny kod ICAO", Toast.LENGTH_SHORT).show()
+                swipeRefreshLayout.isRefreshing = false
             }
         }
     }
