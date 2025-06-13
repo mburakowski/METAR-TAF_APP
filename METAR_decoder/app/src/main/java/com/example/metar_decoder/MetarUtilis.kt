@@ -25,7 +25,7 @@ fun parseMetarTime(code: String): String {
 
 @RequiresApi(Build.VERSION_CODES.O)
 fun formatMetar(metar: MetarResponse): String {
-    val cloudsDescription = metar.cloudz?.joinToString("\n") {
+    val cloudsDescription = metar.clouds?.joinToString("\n") {
         val type = when (it.type) {
             "SCT" -> "Rozproszone chmury (SCT)"
             "BKN" -> "Znaczne zachmurzenie (BKN)"

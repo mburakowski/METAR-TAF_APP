@@ -12,7 +12,7 @@ data class MetarResponse(
     val visibility: ValueField?,
     val altimeter: ValueField?,
     val flight_rules: String?,
-    val cloudz: List<Cloud>?
+    val clouds: List<Cloud>?
 )
 
 data class Time(val repr: String?)

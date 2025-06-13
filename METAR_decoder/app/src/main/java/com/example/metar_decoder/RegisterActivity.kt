@@ -16,12 +16,25 @@ class RegisterActivity : AppCompatActivity() {
 
         val emailEditText = findViewById<EditText>(R.id.emailEditText)
         val passwordEditText = findViewById<EditText>(R.id.passwordEditText)
+        val confirmPasswordEditText = findViewById<EditText>(R.id.confirmPasswordEditText)
         val registerButton = findViewById<Button>(R.id.registerButton)
         val goToLoginButton = findViewById<Button>(R.id.goToLoginButton)
 
         registerButton.setOnClickListener {
             val email = emailEditText.text.toString().trim()
             val password = passwordEditText.text.toString().trim()
+            val confirmPassword = confirmPasswordEditText.text.toString().trim()
+
+            if (email.isBlank() || password.isBlank() || confirmPassword.isBlank()) {
+                Toast.makeText(this, "Uzupełnij wszystkie pola!", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            if (password != confirmPassword) {
+                Toast.makeText(this, "Hasła nie są zgodne!", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
             auth.createUserWithEmailAndPassword(email, password)
                 .addOnSuccessListener {
                     Toast.makeText(this, "Rejestracja udana!", Toast.LENGTH_SHORT).show()
@@ -39,3 +52,4 @@ class RegisterActivity : AppCompatActivity() {
         }
     }
 }
+
