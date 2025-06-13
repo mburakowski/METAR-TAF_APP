@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
     android:padding="24dp"
     android:gravity="center_horizontal"
@@ -30,46 +31,46 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"/>
 
-    <!-- NOWY PRZYCISK -->
     <Button
         android:id="@+id/historyButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Historia wyszukiwań"
-        android:layout_marginTop="16dp"/>
+        android:layout_marginTop="16dp"
+        android:text="Historia wyszukiwań" />
 
-    <ScrollView
+    <!-- SwipeRefreshLayout WOKÓŁ ScrollView -->
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/swipeRefreshLayout"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
         android:layout_marginTop="16dp">
-        <LinearLayout
-            android:orientation="vertical"
+
+        <ScrollView
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="match_parent">
 
-            <TextView
-                android:id="@+id/resultTextView"
+            <LinearLayout
+                android:orientation="vertical"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text=""
-                android:textIsSelectable="true"/>
+                android:layout_height="wrap_content">
 
-            <Button
-                android:id="@+id/decodeButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Dekoduj"
-                android:enabled="false"
-                android:layout_marginTop="16dp" />
+                <TextView
+                    android:id="@+id/resultTextView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text=""
+                    android:textIsSelectable="true"/>
 
-            <TextView
-                android:id="@+id/decodedTextView"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textSize="15sp"
-                android:layout_marginTop="12dp"
-                android:textColor="#333" />
-        </LinearLayout>
-    </ScrollView>
+                <TextView
+                    android:id="@+id/decodedTextView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="15sp"
+                    android:layout_marginTop="12dp"
+                    android:textColor="#333" />
+            </LinearLayout>
+        </ScrollView>
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 </LinearLayout>
+
