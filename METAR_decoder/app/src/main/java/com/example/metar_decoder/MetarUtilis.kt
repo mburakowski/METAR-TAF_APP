@@ -57,7 +57,7 @@ fun formatMetar(metar: MetarResponse): String {
         Czas obserwacji: $timeFormatted
         Temperatura: ${temperature}°C (punkt rosy: ${dewpoint}°C)
         Wiatr: $windDirection° z prędkością $windSpeed kt
-        Widzialność: $visibility NM
+        Widzialność: $visibility ft
         Ciśnienie (QNH): $pressure hPa
         Zachmurzenie:
         $cloudsDescription
