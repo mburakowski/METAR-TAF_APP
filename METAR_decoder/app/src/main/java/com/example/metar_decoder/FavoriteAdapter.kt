@@ -7,7 +7,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
-class HistoryAdapter : RecyclerView.Adapter<HistoryAdapter.ViewHolder>() {
+class FavoriteAdapter : RecyclerView.Adapter<FavoriteAdapter.ViewHolder>() {
 
     private var items: List<String> = emptyList()
 

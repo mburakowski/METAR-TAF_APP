@@ -32,13 +32,19 @@
         android:layout_marginTop="16dp"/>
 
     <Button
+        android:id="@+id/addFavoriteButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Dodaj do ulubionych"
+        android:layout_marginTop="10dp" />
+
+    <Button
         android:id="@+id/historyButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:text="Historia wyszukiwań" />
 
-    <!-- SwipeRefreshLayout WOKÓŁ ScrollView -->
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
         android:id="@+id/swipeRefreshLayout"
         android:layout_width="match_parent"
@@ -69,8 +75,15 @@
                     android:textSize="15sp"
                     android:layout_marginTop="12dp"
                     android:textColor="#333" />
+
+		<TextView
+   	            android:id="@+id/favoritesTextView"
+    		    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+    		    android:text=""
+    		    android:textSize="16sp"/>
             </LinearLayout>
         </ScrollView>
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 </LinearLayout>
-

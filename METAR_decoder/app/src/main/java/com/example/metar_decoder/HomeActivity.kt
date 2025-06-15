@@ -28,12 +28,14 @@ class HomeActivity : AppCompatActivity() {
     private var lastMetarJson: String? = null
     private var lastTafJson: String? = null
 
+    private var favoriteAirports: MutableSet<String> = mutableSetOf()
+
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
 
-        // Poproś o zgodę na powiadomienia (Android 13+)
+        // Zgoda na powiadomienia (Android 13+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED
@@ -48,14 +50,30 @@ class HomeActivity : AppCompatActivity() {
 
         val icaoEditText = findViewById<EditText>(R.id.icaoEditText)
         val fetchButton = findViewById<Button>(R.id.fetchButton)
+        val addFavoriteButton = findViewById<Button>(R.id.addFavoriteButton)
+        val favoritesTextView = findViewById<TextView>(R.id.favoritesTextView)
         val resultTextView = findViewById<TextView>(R.id.resultTextView)
         val decodedTextView = findViewById<TextView>(R.id.decodedTextView)
-        val historyButton: Button? = try { findViewById(R.id.historyButton) } catch (e: Exception) { null }
+        val historyButton = findViewById<Button>(R.id.historyButton)
+        val swipeRefreshLayout = findViewById<SwipeRefreshLayout>(R.id.swipeRefreshLayout)
 
+        // Załaduj ulubione przy starcie
+        loadFavorites { updateFavoritesView(favoritesTextView) }
 
-        // (Opcjonalnie) przejście do historii
-        historyButton?.setOnClickListener {
-            startActivity(Intent(this, HistoryActivity::class.java))
+        addFavoriteButton.setOnClickListener {
+            val icao = icaoEditText.text.toString().trim().uppercase()
+            if (icao.length == 4 && icao.isNotEmpty()) {
+                if (!favoriteAirports.contains(icao)) {
+                    favoriteAirports.add(icao)
+                    firestore.collection("favorites").document(icao)
+                        .set(mapOf("icao" to icao))
+                        .addOnSuccessListener { updateFavoritesView(favoritesTextView) }
+                } else {
+                    Toast.makeText(this, "To lotnisko już jest w ulubionych.", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                Toast.makeText(this, "Podaj poprawny kod ICAO (4 litery)", Toast.LENGTH_SHORT).show()
+            }
         }
 
         fetchButton.setOnClickListener {
@@ -63,6 +81,7 @@ class HomeActivity : AppCompatActivity() {
             if (icao.length == 4) {
                 resultTextView.text = "Pobieram dane..."
 
+                // Zapisz historię
                 val historyData = hashMapOf("icao" to icao, "timestamp" to System.currentTimeMillis())
                 firestore.collection("history").add(historyData)
 
@@ -73,22 +92,24 @@ class HomeActivity : AppCompatActivity() {
                         runOnUiThread {
                             val metarRaw = extractRaw(metarJson)
                             val tafRaw = extractRaw(tafJson)
-                            resultTextView.text = "=== METAR ===\n${metarRaw}\n\n=== TAF ===\n${tafRaw}"
-
-                            try {
-                                val gson = Gson()
-                                val metarDecoded = gson.fromJson(metarJson, MetarResponse::class.java)
-                                val tafDecoded = gson.fromJson(tafJson, TafResponse::class.java)
-
-                                val metarText = formatMetar(metarDecoded)
-                                val tafText = formatTaf(tafDecoded)
-
-                                decodedTextView.text =
-                                    "=== METAR (zdekodowany) ===\n$metarText\n\n=== TAF (zdekodowany) ===\n$tafText"
-                            } catch (e: Exception) {
-                                decodedTextView.text = "Błąd dekodowania: ${e.message}"
+                            // Obsługa złego ICAO
+                            if (metarRaw.isNullOrBlank() && tafRaw.isNullOrBlank()) {
+                                resultTextView.text = "Nie odnaleziono lotniska"
+                                decodedTextView.text = ""
+                            } else {
+                                resultTextView.text = "=== METAR ===\n${metarRaw}\n\n=== TAF ===\n${tafRaw}"
+                                try {
+                                    val gson = Gson()
+                                    val metarDecoded = gson.fromJson(metarJson, MetarResponse::class.java)
+                                    val tafDecoded = gson.fromJson(tafJson, TafResponse::class.java)
+                                    val metarText = formatMetar(metarDecoded)
+                                    val tafText = formatTaf(tafDecoded)
+                                    decodedTextView.text =
+                                        "=== METAR (zdekodowany) ===\n$metarText\n\n=== TAF (zdekodowany) ===\n$tafText"
+                                } catch (e: Exception) {
+                                    decodedTextView.text = "Błąd dekodowania: ${e.message}"
+                                }
                             }
-
                             showNotification(icao)
                         }
                     }
@@ -97,8 +118,6 @@ class HomeActivity : AppCompatActivity() {
                 Toast.makeText(this, "Podaj poprawny kod ICAO (4 litery)", Toast.LENGTH_SHORT).show()
             }
         }
-
-        val swipeRefreshLayout = findViewById<SwipeRefreshLayout>(R.id.swipeRefreshLayout)
 
         swipeRefreshLayout.setOnRefreshListener {
             val icao = icaoEditText.text.toString().trim().uppercase()
@@ -110,22 +129,23 @@ class HomeActivity : AppCompatActivity() {
                         runOnUiThread {
                             val metarRaw = extractRaw(metarJson)
                             val tafRaw = extractRaw(tafJson)
-                            resultTextView.text = "=== METAR ===\n${metarRaw}\n\n=== TAF ===\n${tafRaw}"
-
-                            try {
-                                val gson = Gson()
-                                val metarDecoded = gson.fromJson(metarJson, MetarResponse::class.java)
-                                val tafDecoded = gson.fromJson(tafJson, TafResponse::class.java)
-
-                                val metarText = formatMetar(metarDecoded)
-                                val tafText = formatTaf(tafDecoded)
-
-                                decodedTextView.text =
-                                    "=== METAR (zdekodowany) ===\n$metarText\n\n=== TAF (zdekodowany) ===\n$tafText"
-                            } catch (e: Exception) {
-                                decodedTextView.text = "Błąd dekodowania: ${e.message}"
+                            if (metarRaw.isNullOrBlank() && tafRaw.isNullOrBlank()) {
+                                resultTextView.text = "Nie odnaleziono lotniska"
+                                decodedTextView.text = ""
+                            } else {
+                                resultTextView.text = "=== METAR ===\n${metarRaw}\n\n=== TAF ===\n${tafRaw}"
+                                try {
+                                    val gson = Gson()
+                                    val metarDecoded = gson.fromJson(metarJson, MetarResponse::class.java)
+                                    val tafDecoded = gson.fromJson(tafJson, TafResponse::class.java)
+                                    val metarText = formatMetar(metarDecoded)
+                                    val tafText = formatTaf(tafDecoded)
+                                    decodedTextView.text =
+                                        "=== METAR (zdekodowany) ===\n$metarText\n\n=== TAF (zdekodowany) ===\n$tafText"
+                                } catch (e: Exception) {
+                                    decodedTextView.text = "Błąd dekodowania: ${e.message}"
+                                }
                             }
-
                             swipeRefreshLayout.isRefreshing = false
                             showNotification(icao)
                         }
@@ -135,6 +155,32 @@ class HomeActivity : AppCompatActivity() {
                 Toast.makeText(this, "Podaj poprawny kod ICAO", Toast.LENGTH_SHORT).show()
                 swipeRefreshLayout.isRefreshing = false
             }
+        }
+
+        historyButton.setOnClickListener {
+            startActivity(Intent(this, HistoryActivity::class.java))
+        }
+    }
+
+    private fun loadFavorites(onLoaded: () -> Unit) {
+        favoriteAirports.clear()
+        firestore.collection("favorites").get()
+            .addOnSuccessListener { result ->
+                for (doc in result) {
+                    val icao = doc.getString("icao")
+                    if (icao != null) favoriteAirports.add(icao)
+                }
+                onLoaded()
+            }
+    }
+
+    private fun updateFavoritesView(favoritesTextView: TextView) {
+        if (favoriteAirports.isEmpty()) {
+            favoritesTextView.text = "Ulubione lotniska: brak"
+        } else {
+            favoritesTextView.text = "Ulubione lotniska:\n" +
+                    favoriteAirports.joinToString(", ") { it }
+            favoritesTextView.setTextColor(ContextCompat.getColor(this, android.R.color.holo_orange_dark))
         }
     }
 
@@ -149,7 +195,6 @@ class HomeActivity : AppCompatActivity() {
             override fun onFailure(call: Call, e: IOException) {
                 callback("Błąd: ${e.localizedMessage}")
             }
-
             override fun onResponse(call: Call, response: Response) {
                 val body = response.body?.string()
                 callback(body ?: "Brak danych z serwera")
@@ -168,7 +213,6 @@ class HomeActivity : AppCompatActivity() {
             override fun onFailure(call: Call, e: IOException) {
                 callback("Błąd: ${e.localizedMessage}")
             }
-
             override fun onResponse(call: Call, response: Response) {
                 val body = response.body?.string()
                 callback(body ?: "Brak danych z serwera")
@@ -186,7 +230,7 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
-    // ---- Powiadomienia ----
+    // Powiadomienia
     private fun showNotification(icao: String) {
         val channelId = "metar_channel"
         val notifId = 1
@@ -204,7 +248,6 @@ class HomeActivity : AppCompatActivity() {
             .setContentText("Pobrano dane dla lotniska $icao")
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
         with(NotificationManagerCompat.from(this)) {
-
             if (ContextCompat.checkSelfPermission(
                     this@HomeActivity,
                     android.Manifest.permission.POST_NOTIFICATIONS
