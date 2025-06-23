@@ -6,9 +6,21 @@ import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.auth.FirebaseAuth
 
+/**
+ * Aktywność logowania użytkownika.
+ *
+ * Obsługuje logowanie przez Firebase Authentication. W przypadku udanego logowania przechodzi do ekranu głównego,
+ * w przeciwnym razie pokazuje komunikat o błędzie. Umożliwia też przejście do ekranu rejestracji.
+ */
 class LoginActivity : AppCompatActivity() {
+    /** Instancja FirebaseAuth do obsługi uwierzytelniania użytkowników. */
     private lateinit var auth: FirebaseAuth
 
+    /**
+     * Wywoływane przy utworzeniu aktywności. Inicjalizuje widok, pola oraz ustawia obsługę przycisków.
+     *
+     * @param savedInstanceState Stan zapisany aktywności, jeśli taki istnieje.
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login)
@@ -45,5 +57,3 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 }
-
-

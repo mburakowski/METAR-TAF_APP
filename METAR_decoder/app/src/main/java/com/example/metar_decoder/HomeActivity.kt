@@ -20,23 +20,39 @@ import com.google.firebase.firestore.FirebaseFirestore
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.google.firebase.auth.FirebaseAuth
 
+/**
+ * Główna aktywność aplikacji – pozwala pobierać dane METAR/TAF dla lotnisk ICAO,
+ * zarządzać ulubionymi lotniskami oraz historią wyszukiwań.
+ * Obsługuje także powiadomienia systemowe po pobraniu danych.
+ */
 class HomeActivity : AppCompatActivity() {
 
+    /** Klucz API do AVWX */
     private val apiKey = "KBMXYEsCFCdkxdAbAagPDwVgN1GH-jtDwn01Wjif_5Y"
+    /** Klient HTTP do pobierania danych z AVWX */
     private val client = OkHttpClient()
+    /** Instancja Firestore (baza danych chmurowa Google) */
     private val firestore by lazy { FirebaseFirestore.getInstance() }
 
+    /** Ostatni pobrany surowy JSON METAR */
     private var lastMetarJson: String? = null
+    /** Ostatni pobrany surowy JSON TAF */
     private var lastTafJson: String? = null
 
+    /** Zbiór ulubionych lotnisk ICAO */
     private var favoriteAirports: MutableSet<String> = mutableSetOf()
+    /** Ostatni poprawny kod ICAO (do ulubionych) */
     private var lastValidIcao: String? = null
 
+    /**
+     * Metoda inicjująca aktywność – ładuje widok, obsługuje UI, pobieranie danych i powiadomienia.
+     */
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
 
+        // Poproś o uprawnienie do powiadomień (Android 13+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED
@@ -59,9 +75,10 @@ class HomeActivity : AppCompatActivity() {
         val swipeRefreshLayout = findViewById<SwipeRefreshLayout>(R.id.swipeRefreshLayout)
         val logoutButton = findViewById<Button>(R.id.logoutButton)
 
-
+        // Załaduj ulubione lotniska i narysuj na ekranie
         loadFavorites { renderFavorites(favoritesLayout, icaoEditText) }
 
+        // Dodawanie do ulubionych
         addFavoriteButton.isEnabled = false
         addFavoriteButton.setOnClickListener {
             val icao = lastValidIcao ?: return@setOnClickListener
@@ -79,6 +96,7 @@ class HomeActivity : AppCompatActivity() {
             }
         }
 
+        // Pobierz METAR/TAF
         fetchButton.setOnClickListener {
             val icao = icaoEditText.text.toString().trim().uppercase()
             if (icao.length == 4) {
@@ -86,7 +104,7 @@ class HomeActivity : AppCompatActivity() {
                 addFavoriteButton.isEnabled = false
                 lastValidIcao = null
 
-                // Zapisz historię
+                // Zapisz ICAO do historii
                 val historyData = hashMapOf("icao" to icao, "timestamp" to System.currentTimeMillis())
                 firestore.collection("history").add(historyData)
 
@@ -97,7 +115,7 @@ class HomeActivity : AppCompatActivity() {
                         runOnUiThread {
                             val metarRaw = extractRaw(metarJson)
                             val tafRaw = extractRaw(tafJson)
-                            // Obsługa złego ICAO
+                            // Obsługa błędnego ICAO
                             if (metarRaw.isNullOrBlank() && tafRaw.isNullOrBlank()) {
                                 resultTextView.text = "Nie odnaleziono lotniska"
                                 decodedTextView.text = ""
@@ -132,6 +150,7 @@ class HomeActivity : AppCompatActivity() {
             }
         }
 
+        // Odświeżanie danych
         swipeRefreshLayout.setOnRefreshListener {
             val icao = icaoEditText.text.toString().trim().uppercase()
             if (icao.length == 4) {
@@ -178,6 +197,7 @@ class HomeActivity : AppCompatActivity() {
             }
         }
 
+        // Wylogowywanie
         logoutButton.setOnClickListener {
             FirebaseAuth.getInstance().signOut()
             val intent = Intent(this, LoginActivity::class.java)
@@ -186,11 +206,15 @@ class HomeActivity : AppCompatActivity() {
             finish()
         }
 
+        // Przejdź do historii wyszukiwań
         historyButton.setOnClickListener {
             startActivity(Intent(this, HistoryActivity::class.java))
         }
     }
 
+    /**
+     * Pobiera listę ulubionych lotnisk z Firestore i wywołuje przekazaną funkcję po załadowaniu.
+     */
     private fun loadFavorites(onLoaded: () -> Unit) {
         favoriteAirports.clear()
         firestore.collection("favorites").get()
@@ -203,7 +227,10 @@ class HomeActivity : AppCompatActivity() {
             }
     }
 
-    // renderowanie: przycisk usuń, kliknięcie => uzupełnia pole
+    /**
+     * Renderuje widok ulubionych lotnisk – każdy wiersz zawiera nazwę ICAO i przycisk "Usuń".
+     * Kliknięcie ICAO wpisuje kod w pole wyszukiwania.
+     */
     private fun renderFavorites(layout: LinearLayout, icaoEditText: EditText) {
         layout.removeAllViews()
         val sorted = favoriteAirports.toList().sorted()
@@ -247,6 +274,11 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Pobiera dane METAR z AVWX API dla podanego ICAO.
+     * @param icao Kod lotniska ICAO
+     * @param callback Funkcja przyjmująca surową odpowiedź JSON
+     */
     private fun fetchMetar(icao: String, callback: (String) -> Unit) {
         val url = "https://avwx.rest/api/metar/$icao"
         val request = Request.Builder()
@@ -265,6 +297,11 @@ class HomeActivity : AppCompatActivity() {
         })
     }
 
+    /**
+     * Pobiera dane TAF z AVWX API dla podanego ICAO.
+     * @param icao Kod lotniska ICAO
+     * @param callback Funkcja przyjmująca surową odpowiedź JSON
+     */
     private fun fetchTaf(icao: String, callback: (String) -> Unit) {
         val url = "https://avwx.rest/api/taf/$icao"
         val request = Request.Builder()
@@ -283,6 +320,11 @@ class HomeActivity : AppCompatActivity() {
         })
     }
 
+    /**
+     * Wyciąga surowe pole "raw" (METAR/TAF) z odpowiedzi JSON.
+     * @param json Surowy JSON odpowiedzi
+     * @return Surowy tekst raportu METAR/TAF lub pusty String
+     */
     private fun extractRaw(json: String?): String {
         return try {
             val obj = Gson().fromJson(json, Map::class.java)
@@ -292,6 +334,10 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Wyświetla powiadomienie po pobraniu danych.
+     * @param icao Kod ICAO lotniska
+     */
     private fun showNotification(icao: String) {
         val channelId = "metar_channel"
         val notifId = 1

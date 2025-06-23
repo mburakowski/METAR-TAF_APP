@@ -6,8 +6,22 @@ import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.auth.FirebaseAuth
 
+/**
+ * Aktywność rejestracji nowego użytkownika.
+ *
+ * Pozwala użytkownikowi utworzyć konto przez Firebase Authentication.
+ * Sprawdza poprawność wpisanych danych i zgodność haseł, a po udanej rejestracji przekierowuje do okna logowania.
+ */
 class RegisterActivity : AppCompatActivity() {
+
+    /** Instancja FirebaseAuth do obsługi rejestracji użytkowników. */
     private lateinit var auth: FirebaseAuth
+
+    /**
+     * Wywoływane podczas tworzenia aktywności. Inicjalizuje widoki i obsługuje kliknięcia przycisków.
+     *
+     * @param savedInstanceState Stan zapisany aktywności, jeśli taki istnieje.
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_register)
@@ -20,6 +34,7 @@ class RegisterActivity : AppCompatActivity() {
         val registerButton = findViewById<Button>(R.id.registerButton)
         val goToLoginButton = findViewById<Button>(R.id.goToLoginButton)
 
+        // Obsługa rejestracji
         registerButton.setOnClickListener {
             val email = emailEditText.text.toString().trim()
             val password = passwordEditText.text.toString().trim()
@@ -46,10 +61,10 @@ class RegisterActivity : AppCompatActivity() {
                 }
         }
 
+        // Przycisk do powrotu na ekran logowania
         goToLoginButton.setOnClickListener {
             startActivity(Intent(this, LoginActivity::class.java))
             finish()
         }
     }
 }
-
