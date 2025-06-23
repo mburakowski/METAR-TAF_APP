@@ -40,6 +40,4 @@ dependencies {
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("com.google.firebase:firebase-firestore-ktx:24.11.0")
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
-
-
 }

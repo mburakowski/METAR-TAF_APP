@@ -76,14 +76,22 @@
                     android:layout_marginTop="12dp"
                     android:textColor="#333" />
 
-		<TextView
-   	            android:id="@+id/favoritesTextView"
-    		    android:layout_width="match_parent"
+                <LinearLayout
+                    android:id="@+id/favoritesLayout"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-    		    android:text=""
-    		    android:textSize="16sp"/>
+                    android:orientation="vertical"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="8dp"/>
             </LinearLayout>
         </ScrollView>
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+    <Button
+        android:id="@+id/logoutButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Wyloguj"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="8dp"/>
 </LinearLayout>

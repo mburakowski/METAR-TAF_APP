@@ -14,7 +14,7 @@ data class MetarResponse(
     val flight_rules: String?,
     val remarks: String?,
     val remarks_info: RemarksInfo?,
-    val runway_visibility: List<Any>?, // jeśli chcesz to potem rozszerzyć – zmień typ
+    val runway_visibility: List<Any>?, 
     val raw: String?
 )
 

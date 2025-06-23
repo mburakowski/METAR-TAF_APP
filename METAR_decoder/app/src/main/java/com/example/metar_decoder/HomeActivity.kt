@@ -18,6 +18,7 @@ import okhttp3.*
 import java.io.IOException
 import com.google.firebase.firestore.FirebaseFirestore
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import com.google.firebase.auth.FirebaseAuth
 
 class HomeActivity : AppCompatActivity() {
 
@@ -29,13 +30,13 @@ class HomeActivity : AppCompatActivity() {
     private var lastTafJson: String? = null
 
     private var favoriteAirports: MutableSet<String> = mutableSetOf()
+    private var lastValidIcao: String? = null
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
 
-        // Zgoda na powiadomienia (Android 13+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED
@@ -51,28 +52,30 @@ class HomeActivity : AppCompatActivity() {
         val icaoEditText = findViewById<EditText>(R.id.icaoEditText)
         val fetchButton = findViewById<Button>(R.id.fetchButton)
         val addFavoriteButton = findViewById<Button>(R.id.addFavoriteButton)
-        val favoritesTextView = findViewById<TextView>(R.id.favoritesTextView)
+        val favoritesLayout = findViewById<LinearLayout>(R.id.favoritesLayout)
         val resultTextView = findViewById<TextView>(R.id.resultTextView)
         val decodedTextView = findViewById<TextView>(R.id.decodedTextView)
         val historyButton = findViewById<Button>(R.id.historyButton)
         val swipeRefreshLayout = findViewById<SwipeRefreshLayout>(R.id.swipeRefreshLayout)
+        val logoutButton = findViewById<Button>(R.id.logoutButton)
 
-        // Załaduj ulubione przy starcie
-        loadFavorites { updateFavoritesView(favoritesTextView) }
 
+        loadFavorites { renderFavorites(favoritesLayout, icaoEditText) }
+
+        addFavoriteButton.isEnabled = false
         addFavoriteButton.setOnClickListener {
-            val icao = icaoEditText.text.toString().trim().uppercase()
-            if (icao.length == 4 && icao.isNotEmpty()) {
-                if (!favoriteAirports.contains(icao)) {
-                    favoriteAirports.add(icao)
-                    firestore.collection("favorites").document(icao)
-                        .set(mapOf("icao" to icao))
-                        .addOnSuccessListener { updateFavoritesView(favoritesTextView) }
-                } else {
-                    Toast.makeText(this, "To lotnisko już jest w ulubionych.", Toast.LENGTH_SHORT).show()
-                }
+            val icao = lastValidIcao ?: return@setOnClickListener
+            if (icao.length == 4 && !favoriteAirports.contains(icao)) {
+                favoriteAirports.add(icao)
+                renderFavorites(favoritesLayout, icaoEditText)
+                firestore.collection("favorites").document(icao)
+                    .set(mapOf("icao" to icao))
+                    .addOnSuccessListener {
+                        renderFavorites(favoritesLayout, icaoEditText)
+                        Toast.makeText(this, "$icao dodano do ulubionych", Toast.LENGTH_SHORT).show()
+                    }
             } else {
-                Toast.makeText(this, "Podaj poprawny kod ICAO (4 litery)", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "To lotnisko już jest w ulubionych.", Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -80,6 +83,8 @@ class HomeActivity : AppCompatActivity() {
             val icao = icaoEditText.text.toString().trim().uppercase()
             if (icao.length == 4) {
                 resultTextView.text = "Pobieram dane..."
+                addFavoriteButton.isEnabled = false
+                lastValidIcao = null
 
                 // Zapisz historię
                 val historyData = hashMapOf("icao" to icao, "timestamp" to System.currentTimeMillis())
@@ -96,6 +101,8 @@ class HomeActivity : AppCompatActivity() {
                             if (metarRaw.isNullOrBlank() && tafRaw.isNullOrBlank()) {
                                 resultTextView.text = "Nie odnaleziono lotniska"
                                 decodedTextView.text = ""
+                                addFavoriteButton.isEnabled = false
+                                lastValidIcao = null
                             } else {
                                 resultTextView.text = "=== METAR ===\n${metarRaw}\n\n=== TAF ===\n${tafRaw}"
                                 try {
@@ -106,8 +113,12 @@ class HomeActivity : AppCompatActivity() {
                                     val tafText = formatTaf(tafDecoded)
                                     decodedTextView.text =
                                         "=== METAR (zdekodowany) ===\n$metarText\n\n=== TAF (zdekodowany) ===\n$tafText"
+                                    addFavoriteButton.isEnabled = true
+                                    lastValidIcao = icao
                                 } catch (e: Exception) {
                                     decodedTextView.text = "Błąd dekodowania: ${e.message}"
+                                    addFavoriteButton.isEnabled = false
+                                    lastValidIcao = null
                                 }
                             }
                             showNotification(icao)
@@ -116,6 +127,8 @@ class HomeActivity : AppCompatActivity() {
                 }
             } else {
                 Toast.makeText(this, "Podaj poprawny kod ICAO (4 litery)", Toast.LENGTH_SHORT).show()
+                addFavoriteButton.isEnabled = false
+                lastValidIcao = null
             }
         }
 
@@ -132,6 +145,8 @@ class HomeActivity : AppCompatActivity() {
                             if (metarRaw.isNullOrBlank() && tafRaw.isNullOrBlank()) {
                                 resultTextView.text = "Nie odnaleziono lotniska"
                                 decodedTextView.text = ""
+                                addFavoriteButton.isEnabled = false
+                                lastValidIcao = null
                             } else {
                                 resultTextView.text = "=== METAR ===\n${metarRaw}\n\n=== TAF ===\n${tafRaw}"
                                 try {
@@ -142,8 +157,12 @@ class HomeActivity : AppCompatActivity() {
                                     val tafText = formatTaf(tafDecoded)
                                     decodedTextView.text =
                                         "=== METAR (zdekodowany) ===\n$metarText\n\n=== TAF (zdekodowany) ===\n$tafText"
+                                    addFavoriteButton.isEnabled = true
+                                    lastValidIcao = icao
                                 } catch (e: Exception) {
                                     decodedTextView.text = "Błąd dekodowania: ${e.message}"
+                                    addFavoriteButton.isEnabled = false
+                                    lastValidIcao = null
                                 }
                             }
                             swipeRefreshLayout.isRefreshing = false
@@ -153,8 +172,18 @@ class HomeActivity : AppCompatActivity() {
                 }
             } else {
                 Toast.makeText(this, "Podaj poprawny kod ICAO", Toast.LENGTH_SHORT).show()
+                addFavoriteButton.isEnabled = false
+                lastValidIcao = null
                 swipeRefreshLayout.isRefreshing = false
             }
+        }
+
+        logoutButton.setOnClickListener {
+            FirebaseAuth.getInstance().signOut()
+            val intent = Intent(this, LoginActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            startActivity(intent)
+            finish()
         }
 
         historyButton.setOnClickListener {
@@ -174,13 +203,47 @@ class HomeActivity : AppCompatActivity() {
             }
     }
 
-    private fun updateFavoritesView(favoritesTextView: TextView) {
-        if (favoriteAirports.isEmpty()) {
-            favoritesTextView.text = "Ulubione lotniska: brak"
+    // renderowanie: przycisk usuń, kliknięcie => uzupełnia pole
+    private fun renderFavorites(layout: LinearLayout, icaoEditText: EditText) {
+        layout.removeAllViews()
+        val sorted = favoriteAirports.toList().sorted()
+        if (sorted.isEmpty()) {
+            val tv = TextView(this)
+            tv.text = "Ulubione lotniska: brak"
+            tv.setTextColor(ContextCompat.getColor(this, android.R.color.holo_orange_dark))
+            layout.addView(tv)
         } else {
-            favoritesTextView.text = "Ulubione lotniska:\n" +
-                    favoriteAirports.joinToString(", ") { it }
-            favoritesTextView.setTextColor(ContextCompat.getColor(this, android.R.color.holo_orange_dark))
+            val header = TextView(this)
+            header.text = "Ulubione lotniska:"
+            header.setTextColor(ContextCompat.getColor(this, android.R.color.holo_orange_dark))
+            layout.addView(header)
+            for (icao in sorted) {
+                val row = LinearLayout(this)
+                row.orientation = LinearLayout.HORIZONTAL
+
+                val tv = TextView(this)
+                tv.text = icao
+                tv.setTextColor(ContextCompat.getColor(this, android.R.color.holo_orange_dark))
+                tv.textSize = 16f
+                tv.setPadding(0,0,16,0)
+                tv.setOnClickListener {
+                    icaoEditText.setText(icao)
+                }
+
+                val removeBtn = Button(this)
+                removeBtn.text = "Usuń"
+                removeBtn.textSize = 12f
+                removeBtn.setOnClickListener {
+                    favoriteAirports.remove(icao)
+                    renderFavorites(layout, icaoEditText)
+                    firestore.collection("favorites").document(icao).delete()
+                        .addOnSuccessListener { renderFavorites(layout, icaoEditText) }
+                }
+
+                row.addView(tv)
+                row.addView(removeBtn)
+                layout.addView(row)
+            }
         }
     }
 
@@ -220,7 +283,6 @@ class HomeActivity : AppCompatActivity() {
         })
     }
 
-    // Funkcja do wyciągania pola "raw" z JSON-a (surowy tekst raportu)
     private fun extractRaw(json: String?): String {
         return try {
             val obj = Gson().fromJson(json, Map::class.java)
@@ -230,7 +292,6 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
-    // Powiadomienia
     private fun showNotification(icao: String) {
         val channelId = "metar_channel"
         val notifId = 1

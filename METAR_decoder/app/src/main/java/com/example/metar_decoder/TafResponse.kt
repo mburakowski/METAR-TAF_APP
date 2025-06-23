@@ -26,11 +26,11 @@ data class Forecast(
     val other: List<String> = emptyList(),     // np. ["VCSH"]
     val altimeter: String?,
     val flight_rules: String?,
-    val probability: String?,
+    val probability: Any?,
     val raw: String?,
     val sanitized: String?,
     val wind_gust: WindComponent?,
-    val wind_shear: Any?,       // może być obiektem, rzadko używane – pozostawione jako Any?
+    val wind_shear: Any?,       // może być obiektem
     val icing: List<Any>?,      // szczegóły mogą być dodane jeśli potrzebne
     val turbulance: List<Any>?, // szczegóły mogą być dodane jeśli potrzebne
 )
