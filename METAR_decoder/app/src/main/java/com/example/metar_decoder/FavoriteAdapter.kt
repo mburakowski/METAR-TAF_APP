@@ -3,45 +3,47 @@ package com.example.metar_decoder
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import android.widget.TextView
 
 /**
- * Adapter RecyclerView do wyświetlania listy ulubionych lotnisk ICAO.
- *
- * @constructor Tworzy adapter z pustą listą.
+ * Adapter RecyclerView do wyświetlania ulubionych lotnisk.
+ * Oczekuje listy obiektów [HistoryEntry], aby pokazać kod ICAO, nazwę,
+ * państwo, region i współrzędne w layoucie item_history.xml.
  */
-class FavoriteAdapter : RecyclerView.Adapter<FavoriteAdapter.ViewHolder>() {
+class FavoriteAdapter(
+    private val onItemClick: ((HistoryEntry) -> Unit)? = null
+) : ListAdapter<HistoryEntry, FavoriteAdapter.ViewHolder>(FavoriteDiffCallback()) {
 
-    /** Lista kodów ICAO ulubionych lotnisk. */
-    private var items: List<String> = emptyList()
+    inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        private val textIcaoName      = view.findViewById<TextView>(R.id.textIcaoName)
+        private val textCountryRegion = view.findViewById<TextView>(R.id.textCountryRegion)
+        private val textCoordinates   = view.findViewById<TextView>(R.id.textCoordinates)
 
-    /**
-     * Aktualizuje listę ulubionych lotnisk.
-     * @param newItems Nowa lista kodów ICAO.
-     */
-    fun updateData(newItems: List<String>) {
-        items = newItems
-        notifyDataSetChanged()
+        fun bind(entry: HistoryEntry) {
+            textIcaoName.text      = "${entry.icao} – ${entry.airportName.orEmpty()}"
+            textCountryRegion.text = "${entry.country} ∙ ${entry.region}"
+            textCoordinates.text   = String.format("%.4f, %.4f", entry.latitude, entry.longitude)
+            itemView.setOnClickListener { onItemClick?.invoke(entry) }
+        }
     }
 
-    /**
-     * ViewHolder klasyczny do wyświetlania pojedynczego kodu ICAO.
-     * @property icaoTextView Pole tekstowe z kodem ICAO.
-     */
-    class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        val icaoTextView: TextView = view.findViewById(R.id.icaoTextView)
-    }
-
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-        val view = LayoutInflater.from(parent.context)
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = ViewHolder(
+        LayoutInflater.from(parent.context)
             .inflate(R.layout.item_history, parent, false)
-        return ViewHolder(view)
-    }
-
-    override fun getItemCount() = items.size
+    )
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.icaoTextView.text = items[position]
+        holder.bind(getItem(position))
     }
+}
+
+/**
+ * DiffUtil do FavoriteAdapter – porównuje dwa [HistoryEntry].
+ */
+class FavoriteDiffCallback : DiffUtil.ItemCallback<HistoryEntry>() {
+    override fun areItemsTheSame(old: HistoryEntry, new: HistoryEntry) = old.icao == new.icao
+    override fun areContentsTheSame(old: HistoryEntry, new: HistoryEntry) = old == new
 }

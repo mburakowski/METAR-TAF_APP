@@ -1,51 +1,90 @@
 package com.example.metar_decoder
 
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 
 /**
- * Adapter RecyclerView wyświetlający historię wpisywanych kodów ICAO.
+ * Reprezentuje wpis w historii wyszukiwania lotniska.
  *
- * Każdy element listy to jeden kod ICAO zapisany przez użytkownika.
+ * @property icao Kod ICAO lotniska.
+ * @property airportName Opcjonalna nazwa lotniska.
+ * @property country Państwo, w którym znajduje się lotnisko.
+ * @property region Region lub województwo lotniska.
+ * @property latitude Szerokość geograficzna lotniska.
+ * @property longitude Długość geograficzna lotniska.
  */
-class HistoryAdapter : RecyclerView.Adapter<HistoryAdapter.ViewHolder>() {
+data class HistoryEntry(
+    val icao: String,
+    val airportName: String?,
+    val country: String,
+    val region: String,
+    val latitude: Double,
+    val longitude: Double
+)
 
-    /** Lista kodów ICAO do wyświetlenia */
-    private var items: List<String> = emptyList()
-
-    /**
-     * Aktualizuje dane w adapterze i odświeża widok.
-     *
-     * @param newItems Nowa lista kodów ICAO do wyświetlenia.
-     */
-    fun updateData(newItems: List<String>) {
-        items = newItems
-        notifyDataSetChanged()
-    }
-
-    /**
-     * Przechowuje widoki jednego elementu listy (ViewHolder wzorzec ViewHolder).
-     *
-     * @param view Widok pojedynczego elementu listy.
-     */
-    class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        /** Pole tekstowe wyświetlające kod ICAO */
-        val icaoTextView: TextView = view.findViewById(R.id.icaoTextView)
-    }
+/**
+ * Adapter RecyclerView wyświetlający historię wyszukiwania lotnisk
+ * w postaci listy wpisów {@link HistoryEntry}.
+ */
+class HistoryAdapter(
+    private val onItemClick: ((HistoryEntry) -> Unit)? = null
+) : ListAdapter<HistoryEntry, HistoryAdapter.ViewHolder>(HistoryDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+        Log.d("RV-DEBUG", "onCreateViewHolder()")        // ← log tworzenia ViewHoldera
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_history, parent, false)
         return ViewHolder(view)
     }
 
-    override fun getItemCount() = items.size
-
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.icaoTextView.text = items[position]
+        Log.d("RV-DEBUG", "onBindViewHolder($position)")  // ← log wiązania danych
+        holder.bind(getItem(position))
+    }
+
+    override fun onViewRecycled(holder: ViewHolder) {
+        super.onViewRecycled(holder)
+        Log.d("RV-DEBUG", "onViewRecycled()")             // ← log recyklingu
+    }
+
+    inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        private val textIcaoName      = view.findViewById<TextView>(R.id.textIcaoName)
+        private val textCountryRegion = view.findViewById<TextView>(R.id.textCountryRegion)
+        private val textCoordinates   = view.findViewById<TextView>(R.id.textCoordinates)
+
+        init {
+            Log.d("RV-DEBUG", "ViewHolder.init()")       // ← log utworzenia instancji
+        }
+
+        fun bind(entry: HistoryEntry) {
+            textIcaoName.text      = "${entry.icao} – ${entry.airportName.orEmpty()}"
+            textCountryRegion.text = "${entry.country} ∙ ${entry.region}"
+            textCoordinates.text   = String.format("%.4f, %.4f", entry.latitude, entry.longitude)
+            itemView.setOnClickListener { onItemClick?.invoke(entry) }
+        }
     }
 }
 
+
+/**
+ * Callback wykorzystywany przez ListAdapter do porównywania elementów.
+ */
+class HistoryDiffCallback : DiffUtil.ItemCallback<HistoryEntry>() {
+    /**
+     * Sprawdza, czy dwa obiekty reprezentują ten sam wpis (na podstawie kodu ICAO).
+     */
+    override fun areItemsTheSame(oldItem: HistoryEntry, newItem: HistoryEntry): Boolean =
+        oldItem.icao == newItem.icao
+
+    /**
+     * Sprawdza, czy zawartość dwóch obiektów jest identyczna.
+     */
+    override fun areContentsTheSame(oldItem: HistoryEntry, newItem: HistoryEntry): Boolean =
+        oldItem == newItem
+}

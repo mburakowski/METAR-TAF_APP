@@ -1,8 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
-<TextView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/icaoTextView"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:textSize="18sp"
-    android:padding="16dp"
-    android:textColor="#222222"/>
+    android:padding="12dp">
+
+    <!-- ICAO i nazwa lotniska -->
+    <TextView
+        android:id="@+id/textIcaoName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="18sp"
+        android:textColor="#222222"
+        android:textStyle="bold"/>
+
+    <!-- Państwo ∙ region -->
+    <TextView
+        android:id="@+id/textCountryRegion"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="14sp"
+        android:textColor="#555555"
+        android:paddingTop="4dp"/>
+
+    <!-- Szerokość i długość geograficzna -->
+    <TextView
+        android:id="@+id/textCoordinates"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="14sp"
+        android:textColor="#555555"
+        android:paddingTop="2dp"/>
+</LinearLayout>
